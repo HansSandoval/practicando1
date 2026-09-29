@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gastos Hans & Deylin</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Gastos Hans &amp; Deylin</h1>
+    <label class="month">Mes
+      <input type="month" id="month">
+    </label>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Ingresos</h2>
+      <div class="grid2">
+        <label>Hans <input type="number" id="income-hans" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+        <label>Deylin <input type="number" id="income-deylin" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+      </div>
+      <p class="total">Ingresos totales: <strong id="income-total">$0</strong></p>
+    </section>
+
+    <section class="card">
+      <h2>Gastos fijos</h2>
+      <table id="expenses">
+        <thead><tr><th>Concepto</th><th>Monto</th><th>Paga</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button id="add-expense" type="button">+ Agregar gasto fijo</button>
+      <label class="split">Gastos de "Ambos" se reparten
+        <select id="split-mode">
+          <option value="proportional">proporcional a los ingresos</option>
+          <option value="equal">50 / 50</option>
+        </select>
+      </label>
+      <p class="total">Gastos fijos totales: <strong id="expenses-total">$0</strong></p>
+      <p class="total">Sobrante después de gastos fijos: <strong id="remaining-total">$0</strong></p>
+      <button id="copy-prev" type="button" class="secondary">Copiar gastos del mes anterior</button>
+    </section>
+
+    <div class="people">
+      <section class="card person" id="card-hans">
+        <h2>Hans</h2>
+        <dl></dl>
+      </section>
+      <section class="card person" id="card-deylin">
+        <h2>Deylin</h2>
+        <dl></dl>
+      </section>
+    </div>
+
+    <section class="card together" id="card-together">
+      <h2>Juntos</h2>
+      <dl></dl>
+    </section>
+  </main>
+
+  <footer>Reparto del sobrante: 20% plata propia · 20% mancomunada · 60% ahorro. Los datos se guardan en este navegador.</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
