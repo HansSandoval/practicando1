@@ -1,66 +1,511 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gastos Hans & Deylin</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <header>
+<title>Gastos Hans &amp; Deylin</title>
+<meta name="description" content="Presupuesto mensual compartido: ingresos, gastos fijos y reparto 20/20/60 con acumulado por mes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: una columna de trabajo — mes activo arriba, luego tarjetas por persona, "Juntos" y el acumulado histórico. */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --surface-2: #eaeee8;
+  --fg: #1b211d;
+  --muted: #5d6860;
+  --line: #d8ded6;
+  --accent: #2f6b4f;
+  --accent-fg: #ffffff;
+  --hans: #2c5d8f;
+  --deylin: #b0476a;
+  --juntos: #2f6b4f;
+  --danger: #b3261e;
+  --warn-bg: #fff4d6;
+  --warn-fg: #6b4e00;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1a211c; --surface-2: #222b25; --fg: #e6ebe6; --muted: #9aa69d;
+    --line: #2f3a33; --accent: #6fbf95; --accent-fg: #0e1a13; --hans: #7fb2e5; --deylin: #ec8fae;
+    --juntos: #6fbf95; --danger: #ff8a80; --warn-bg: #3a3014; --warn-fg: #f2d68a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1a211c; --surface-2: #222b25; --fg: #e6ebe6; --muted: #9aa69d;
+  --line: #2f3a33; --accent: #6fbf95; --accent-fg: #0e1a13; --hans: #7fb2e5; --deylin: #ec8fae;
+  --juntos: #6fbf95; --danger: #ff8a80; --warn-bg: #3a3014; --warn-fg: #f2d68a; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font-body); }
+.wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 18px; }
+
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.1rem; font-weight: 600; }
+.label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+
+.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.sync { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.sync[data-state="ok"]::before { background: var(--accent); }
+.sync[data-state="saving"]::before { background: var(--warn-fg); }
+.sync[data-state="error"]::before { background: var(--danger); }
+
+.monthbar { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+.monthbar .name { flex: 1; text-align: center; font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.row > * { flex: 1 1 180px; min-width: 0; }
+
+label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+input, select {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
+}
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[readonly], select:disabled { opacity: 0.7; }
+
+button {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; padding: 9px 14px;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+}
+button.ghost { background: transparent; color: var(--accent); }
+button.icon { background: transparent; border-color: var(--line); color: var(--fg); padding: 8px 12px; }
+button.x { background: transparent; border: 0; color: var(--danger); padding: 6px 10px; font-size: 1.15rem; line-height: 1; }
+button.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+button:disabled { opacity: 0.45; cursor: default; }
+
+.notice { background: var(--warn-bg); color: var(--warn-fg); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; }
+
+.expenses { display: grid; gap: 8px; }
+.exp { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.exp.head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+
+.totals { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.totals div { display: grid; }
+.totals strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+.people { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.who { border-top: 4px solid var(--c); }
+.who h2 { color: var(--c); }
+#p-hans { --c: var(--hans); }
+#p-deylin { --c: var(--deylin); }
+#p-juntos, #p-acum { --c: var(--juntos); }
+
+dl { display: grid; grid-template-columns: 1fr auto; row-gap: 6px; margin: 0; }
+dt { color: var(--muted); }
+dd { margin: 0; padding-left: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.sep { border-top: 1px solid var(--line); padding-top: 6px; }
+dd.big { font-weight: 700; font-size: 1.15rem; color: var(--c); }
+.neg { color: var(--danger); }
+
+.bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
+.bar span { display: block; height: 100%; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+tr.current td { background: var(--surface-2); }
+tfoot td { font-weight: 700; border-bottom: 0; }
+
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+footer { color: var(--muted); font-size: 0.8rem; }
+
+@media (max-width: 560px) {
+  .exp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .exp .name { grid-column: 1 / -1; }
+  .exp.head { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar span { transition: width 0.3s ease; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
     <h1>Gastos Hans &amp; Deylin</h1>
-    <label class="month">Mes
-      <input type="month" id="month">
-    </label>
+    <span class="sync" id="sync" data-state="local">Conectando…</span>
   </header>
 
-  <main>
-    <section class="card">
-      <h2>Ingresos</h2>
-      <div class="grid2">
-        <label>Hans <input type="number" id="income-hans" min="0" step="1" inputmode="numeric" placeholder="0"></label>
-        <label>Deylin <input type="number" id="income-deylin" min="0" step="1" inputmode="numeric" placeholder="0"></label>
-      </div>
-      <p class="total">Ingresos totales: <strong id="income-total">$0</strong></p>
-    </section>
+  <nav class="monthbar" aria-label="Mes">
+    <button class="icon" id="prev" type="button" aria-label="Mes anterior">←</button>
+    <span class="name" id="month-name"></span>
+    <button class="icon" id="next" type="button" aria-label="Mes siguiente">→</button>
+  </nav>
 
-    <section class="card">
-      <h2>Gastos fijos</h2>
-      <table id="expenses">
-        <thead><tr><th>Concepto</th><th>Monto</th><th>Paga</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <button id="add-expense" type="button">+ Agregar gasto fijo</button>
-      <label class="split">Gastos de "Ambos" se reparten
-        <select id="split-mode">
-          <option value="proportional">proporcional a los ingresos</option>
-          <option value="equal">50 / 50</option>
-        </select>
-      </label>
-      <p class="total">Gastos fijos totales: <strong id="expenses-total">$0</strong></p>
-      <p class="total">Sobrante después de gastos fijos: <strong id="remaining-total">$0</strong></p>
-      <button id="copy-prev" type="button" class="secondary">Copiar gastos del mes anterior</button>
-    </section>
+  <div class="notice" id="example-note" hidden>Estos son datos de ejemplo. Reemplázalos con tus montos reales o borra el mes.</div>
+  <div class="notice" id="readonly-note" hidden>Puedes ver los datos, pero no editarlos. Pide al dueño que te comparta la página como editor.</div>
 
-    <div class="people">
-      <section class="card person" id="card-hans">
-        <h2>Hans</h2>
-        <dl></dl>
-      </section>
-      <section class="card person" id="card-deylin">
-        <h2>Deylin</h2>
-        <dl></dl>
-      </section>
+  <section class="panel" aria-labelledby="h-ing">
+    <h2 id="h-ing">Ingresos del mes</h2>
+    <div class="row">
+      <label>Sueldo Hans <input id="inc-hans" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+      <label>Sueldo Deylin <input id="inc-deylin" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>
     </div>
+    <div class="totals"><div><span class="label">Ingresos totales</span><strong id="t-inc">$0</strong></div></div>
+  </section>
 
-    <section class="card together" id="card-together">
-      <h2>Juntos</h2>
-      <dl></dl>
-    </section>
-  </main>
+  <section class="panel" aria-labelledby="h-gf">
+    <h2 id="h-gf">Gastos fijos</h2>
+    <div class="expenses" id="expenses"></div>
+    <div class="row">
+      <button id="add" type="button" style="flex: 0 0 auto">+ Agregar gasto</button>
+      <button id="copy-prev" class="ghost" type="button" style="flex: 0 0 auto">Copiar mes anterior</button>
+    </div>
+    <label>Los gastos de "Ambos" se reparten
+      <select id="split">
+        <option value="proportional">Proporcional a los sueldos</option>
+        <option value="equal">50 / 50</option>
+      </select>
+    </label>
+    <div class="totals">
+      <div><span class="label">Gastos fijos</span><strong id="t-exp">$0</strong></div>
+      <div><span class="label">Sobrante</span><strong id="t-rem">$0</strong></div>
+    </div>
+    <p id="msg" class="label" role="status" style="margin: 0; text-transform: none; letter-spacing: 0"></p>
+  </section>
 
-  <footer>Reparto del sobrante: 20% plata propia · 20% mancomunada · 60% ahorro. Los datos se guardan en este navegador.</footer>
+  <div class="people">
+    <section class="panel who" id="p-hans"><h2>Hans</h2><dl></dl></section>
+    <section class="panel who" id="p-deylin"><h2>Deylin</h2><dl></dl></section>
+  </div>
 
-  <script src="app.js"></script>
-</body>
-</html>
+  <section class="panel who" id="p-juntos">
+    <h2>Juntos este mes</h2>
+    <dl></dl>
+  </section>
+
+  <section class="panel who" id="p-acum">
+    <h2>Acumulado</h2>
+    <p style="margin: 0; color: var(--muted)" id="acum-range"></p>
+    <dl></dl>
+    <div class="bar" id="acum-bar" aria-hidden="true"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Mes</th><th>Ingresos</th><th>Gastos fijos</th><th>Propia Hans</th><th>Propia Deylin</th><th>Mancomunada</th><th>Ahorro</th></tr></thead>
+        <tbody id="hist"></tbody>
+        <tfoot id="hist-foot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="confirm" id="del-area">
+      <button class="danger" id="del" type="button">Borrar este mes</button>
+    </div>
+  </section>
+
+  <footer>El sobrante de cada uno (sueldo − su parte de los gastos fijos) se reparte en 20% plata propia, 20% mancomunada y 60% ahorro. "Juntos" suma la mancomunada y el ahorro de ambos.</footer>
+</div>
+
+<script>
+'use strict';
+const SPLIT = { propia: 0.2, mancomunada: 0.2, ahorro: 0.6 };
+const PAYERS = { ambos: 'Ambos', hans: 'Hans', deylin: 'Deylin' };
+const LS_KEY = 'gastos-hans-deylin-v2';
+const money = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+const fmt = (n) => money.format(Math.round(n));
+const $ = (id) => document.getElementById(id);
+
+// ---------- Cálculo ----------
+function calc(m) {
+  const hans = Number(m.incomes?.hans) || 0;
+  const deylin = Number(m.incomes?.deylin) || 0;
+  const incomeTotal = hans + deylin;
+  const hShare = m.splitMode === 'equal' || incomeTotal === 0 ? 0.5 : hans / incomeTotal;
+  const fixed = { hans: 0, deylin: 0 };
+  let expTotal = 0;
+  for (const e of m.expenses || []) {
+    const a = Number(e.amount) || 0;
+    expTotal += a;
+    if (e.payer === 'hans') fixed.hans += a;
+    else if (e.payer === 'deylin') fixed.deylin += a;
+    else { fixed.hans += a * hShare; fixed.deylin += a * (1 - hShare); }
+  }
+  const person = (income, f) => {
+    const remaining = income - f;
+    const base = Math.max(0, remaining);
+    return { income, fixed: f, remaining, propia: base * SPLIT.propia, mancomunada: base * SPLIT.mancomunada, ahorro: base * SPLIT.ahorro };
+  };
+  const h = person(hans, fixed.hans), d = person(deylin, fixed.deylin);
+  const mancomunada = h.mancomunada + d.mancomunada, ahorro = h.ahorro + d.ahorro;
+  return { incomeTotal, expTotal, remTotal: incomeTotal - expTotal, hans: h, deylin: d, juntos: { mancomunada, ahorro, total: mancomunada + ahorro } };
+}
+
+// ---------- Estado ----------
+const months = {};        // clave "AAAA-MM" -> datos del mes
+const dirty = new Set();  // meses con cambios locales aún no guardados
+let db = null;            // colección compartida, o null = solo este dispositivo
+let canWrite = true;
+const now = new Date();
+let key = ym(now.getFullYear(), now.getMonth());
+
+function ym(y, m) { const d = new Date(y, m, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+function shift(k, n) { const [y, m] = k.split('-').map(Number); return ym(y, m - 1 + n); }
+function monthLabel(k) { const [y, m] = k.split('-').map(Number); const s = new Date(y, m - 1, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }); return s[0].toUpperCase() + s.slice(1); }
+function blank() { return { incomes: { hans: '', deylin: '' }, splitMode: 'proportional', expenses: [] }; }
+function cur() { return months[key] || blank(); }
+function hasData(m) { return m && (Number(m.incomes?.hans) || Number(m.incomes?.deylin) || (m.expenses || []).length); }
+
+function setSync(state, text) { const s = $('sync'); s.dataset.state = state; s.textContent = text; }
+
+// ---------- Guardado ----------
+const timers = {};
+let chain = Promise.resolve();
+function edit(mutator) {
+  if (!canWrite) return;
+  const m = months[key] ? months[key] : (months[key] = blank());
+  mutator(m);
+  delete m.ejemplo;
+  dirty.add(key);
+  renderResults();
+  $('example-note').hidden = true;
+  queueSave(key);
+}
+function queueSave(k) {
+  clearTimeout(timers[k]);
+  if (db) setSync('saving', 'Guardando…');
+  timers[k] = setTimeout(() => { chain = chain.then(() => save(k)); }, 600);
+}
+async function save(k) {
+  const data = JSON.parse(JSON.stringify(months[k]));
+  dirty.delete(k);
+  if (!db) { saveLocal(); return; }
+  try {
+    await db.doc(k).set(data);
+    if (!dirty.size) setSync('ok', 'Sincronizado');
+  } catch (e) {
+    if (e && e.code === 'invalid_argument') setReadOnly();
+    else setSync('error', 'No se pudo guardar. Revisa tu conexión.');
+  }
+}
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(months)); } catch {} }
+function loadLocal() { try { Object.assign(months, JSON.parse(localStorage.getItem(LS_KEY)) || {}); } catch {} }
+
+function setReadOnly() {
+  canWrite = false;
+  $('readonly-note').hidden = false;
+  setSync('ok', 'Solo lectura');
+  document.querySelectorAll('input, select, #add, #copy-prev, #del, .x').forEach((el) => { el.disabled = true; });
+}
+
+// ---------- Render: formulario ----------
+function renderForm() {
+  const m = cur();
+  $('month-name').textContent = monthLabel(key);
+  $('inc-hans').value = m.incomes?.hans ?? '';
+  $('inc-deylin').value = m.incomes?.deylin ?? '';
+  $('split').value = m.splitMode || 'proportional';
+  $('example-note').hidden = !m.ejemplo;
+  $('msg').textContent = '';
+  resetDelete();
+
+  const box = $('expenses');
+  box.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'exp head';
+  head.innerHTML = '<span>Concepto</span><span>Monto</span><span>Paga</span><span></span>';
+  box.append(head);
+  (m.expenses || []).forEach((e, i) => {
+    const row = document.createElement('div');
+    row.className = 'exp';
+    const name = Object.assign(document.createElement('input'), { className: 'name', value: e.name || '', placeholder: 'Arriendo, luz, internet…', id: `exp-name-${i}` });
+    name.setAttribute('aria-label', 'Concepto');
+    name.addEventListener('input', () => edit((mm) => { mm.expenses[i].name = name.value; }));
+    const amount = Object.assign(document.createElement('input'), { type: 'number', min: '0', step: '1', value: e.amount ?? '', placeholder: '0', id: `exp-amt-${i}` });
+    amount.inputMode = 'numeric';
+    amount.setAttribute('aria-label', 'Monto');
+    amount.addEventListener('input', () => edit((mm) => { mm.expenses[i].amount = amount.value; }));
+    const payer = document.createElement('select');
+    payer.id = `exp-payer-${i}`;
+    payer.setAttribute('aria-label', 'Quién paga');
+    for (const [v, l] of Object.entries(PAYERS)) payer.add(new Option(l, v));
+    payer.value = e.payer || 'ambos';
+    payer.addEventListener('change', () => edit((mm) => { mm.expenses[i].payer = payer.value; }));
+    const x = Object.assign(document.createElement('button'), { type: 'button', className: 'x', textContent: '×', title: 'Quitar gasto' });
+    x.setAttribute('aria-label', 'Quitar gasto');
+    x.addEventListener('click', () => { edit((mm) => { mm.expenses.splice(i, 1); }); renderForm(); });
+    row.append(name, amount, payer, x);
+    box.append(row);
+  });
+  if (!(m.expenses || []).length) {
+    const p = document.createElement('p');
+    p.style.cssText = 'margin:0;color:var(--muted)';
+    p.textContent = 'Aún no hay gastos fijos este mes. Agrega uno o copia los del mes anterior.';
+    box.append(p);
+  }
+  if (!canWrite) setReadOnly();
+  renderResults();
+}
+
+// ---------- Render: resultados ----------
+function list(dl, rows) {
+  dl.replaceChildren();
+  for (const [label, value, cls] of rows) {
+    const dt = document.createElement('dt'), dd = document.createElement('dd');
+    dt.textContent = label; dd.textContent = fmt(value);
+    if (cls) { dt.className = cls; dd.className = cls; }
+    if (value < 0) dd.classList.add('neg');
+    dl.append(dt, dd);
+  }
+}
+function personRows(p) {
+  return [
+    ['Sueldo', p.income], ['Gastos fijos (su parte)', p.fixed], ['Sobrante', p.remaining, 'sep'],
+    ['Plata propia · 20%', p.propia, 'sep big'], ['Mancomunada · 20%', p.mancomunada], ['Ahorro · 60%', p.ahorro],
+  ];
+}
+
+function renderResults() {
+  const r = calc(cur());
+  $('t-inc').textContent = fmt(r.incomeTotal);
+  $('t-exp').textContent = fmt(r.expTotal);
+  $('t-rem').textContent = fmt(r.remTotal);
+  $('t-rem').classList.toggle('neg', r.remTotal < 0);
+  list(document.querySelector('#p-hans dl'), personRows(r.hans));
+  list(document.querySelector('#p-deylin dl'), personRows(r.deylin));
+  list(document.querySelector('#p-juntos dl'), [
+    ['Mancomunada Hans', r.hans.mancomunada], ['Mancomunada Deylin', r.deylin.mancomunada],
+    ['Total mancomunada', r.juntos.mancomunada, 'sep'],
+    ['Ahorro Hans', r.hans.ahorro, 'sep'], ['Ahorro Deylin', r.deylin.ahorro],
+    ['Total ahorro', r.juntos.ahorro, 'sep'],
+    ['Total juntos', r.juntos.total, 'sep big'],
+  ]);
+  renderAccum();
+}
+
+function renderAccum() {
+  const keys = Object.keys(months).filter((k) => k <= key && hasData(months[k])).sort();
+  const acc = { inc: 0, exp: 0, ph: 0, pd: 0, man: 0, aho: 0 };
+  const body = $('hist');
+  body.replaceChildren();
+  for (const k of keys) {
+    const r = calc(months[k]);
+    const row = [monthLabel(k), r.incomeTotal, r.expTotal, r.hans.propia, r.deylin.propia, r.juntos.mancomunada, r.juntos.ahorro];
+    acc.inc += r.incomeTotal; acc.exp += r.expTotal; acc.ph += r.hans.propia; acc.pd += r.deylin.propia;
+    acc.man += r.juntos.mancomunada; acc.aho += r.juntos.ahorro;
+    const tr = document.createElement('tr');
+    if (k === key) tr.className = 'current';
+    row.forEach((v, i) => { const td = document.createElement('td'); td.textContent = i ? fmt(v) : v; tr.append(td); });
+    body.append(tr);
+  }
+  const foot = $('hist-foot');
+  foot.replaceChildren();
+  if (keys.length) {
+    const tr = document.createElement('tr');
+    ['Total', acc.inc, acc.exp, acc.ph, acc.pd, acc.man, acc.aho].forEach((v, i) => { const td = document.createElement('td'); td.textContent = i ? fmt(v) : v; tr.append(td); });
+    foot.append(tr);
+  } else {
+    const tr = document.createElement('tr'), td = document.createElement('td');
+    td.colSpan = 7; td.style.textAlign = 'left'; td.style.color = 'var(--muted)';
+    td.textContent = 'Todavía no hay meses con datos. Ingresa los sueldos para empezar.';
+    tr.append(td); body.append(tr);
+  }
+  $('acum-range').textContent = keys.length
+    ? `${keys.length} ${keys.length === 1 ? 'mes' : 'meses'}, de ${monthLabel(keys[0])} a ${monthLabel(keys[keys.length - 1])}.`
+    : '';
+  list(document.querySelector('#p-acum dl'), [
+    ['Plata propia Hans', acc.ph], ['Plata propia Deylin', acc.pd],
+    ['Mancomunada acumulada', acc.man, 'sep'], ['Ahorro acumulado', acc.aho],
+    ['Total juntos acumulado', acc.man + acc.aho, 'sep big'],
+  ]);
+  const total = acc.ph + acc.pd + acc.man + acc.aho;
+  const bar = $('acum-bar');
+  bar.replaceChildren();
+  if (total > 0) {
+    for (const [v, c] of [[acc.ph, 'var(--hans)'], [acc.pd, 'var(--deylin)'], [acc.man, 'var(--muted)'], [acc.aho, 'var(--juntos)']]) {
+      const s = document.createElement('span'); s.style.width = `${(v / total) * 100}%`; s.style.background = c; bar.append(s);
+    }
+  }
+}
+
+// ---------- Borrar mes (confirmación dentro de la página) ----------
+function resetDelete() {
+  const area = $('del-area');
+  area.replaceChildren();
+  const b = Object.assign(document.createElement('button'), { type: 'button', className: 'danger', id: 'del', textContent: 'Borrar este mes' });
+  b.disabled = !canWrite || !months[key];
+  b.addEventListener('click', () => {
+    area.replaceChildren();
+    const t = document.createElement('span'); t.textContent = `¿Borrar todos los datos de ${monthLabel(key)}?`;
+    const yes = Object.assign(document.createElement('button'), { type: 'button', className: 'danger', textContent: 'Sí, borrar' });
+    const no = Object.assign(document.createElement('button'), { type: 'button', className: 'ghost', textContent: 'Cancelar' });
+    yes.addEventListener('click', async () => {
+      const k = key;
+      clearTimeout(timers[k]); dirty.delete(k); delete months[k];
+      if (db) { try { await db.doc(k).delete(); } catch { setSync('error', 'No se pudo borrar. Revisa tu conexión.'); } }
+      else saveLocal();
+      renderForm();
+    });
+    no.addEventListener('click', resetDelete);
+    area.append(t, yes, no);
+  });
+  area.append(b);
+}
+
+// ---------- Eventos ----------
+$('prev').addEventListener('click', () => { key = shift(key, -1); renderForm(); });
+$('next').addEventListener('click', () => { key = shift(key, 1); renderForm(); });
+$('inc-hans').addEventListener('input', (e) => edit((m) => { m.incomes.hans = e.target.value; }));
+$('inc-deylin').addEventListener('input', (e) => edit((m) => { m.incomes.deylin = e.target.value; }));
+$('split').addEventListener('change', (e) => edit((m) => { m.splitMode = e.target.value; }));
+$('add').addEventListener('click', () => {
+  edit((m) => { m.expenses.push({ name: '', amount: '', payer: 'ambos' }); });
+  renderForm();
+  const inputs = document.querySelectorAll('#expenses .name');
+  inputs[inputs.length - 1]?.focus();
+});
+$('copy-prev').addEventListener('click', () => {
+  const prev = months[shift(key, -1)];
+  if (!hasData(prev)) { $('msg').textContent = `${monthLabel(shift(key, -1))} no tiene datos para copiar.`; return; }
+  edit((m) => {
+    m.incomes = { ...prev.incomes };
+    m.splitMode = prev.splitMode;
+    m.expenses = prev.expenses.map((e) => ({ ...e }));
+  });
+  renderForm();
+  $('msg').textContent = `Copiados sueldos y gastos de ${monthLabel(shift(key, -1))}.`;
+});
+
+// ---------- Arranque ----------
+renderForm();
+setSync('local', 'Conectando…');
+
+(async () => {
+  const store = window.claude?.use ? await window.claude.use('db') : null;
+  if (!store) {
+    loadLocal();
+    setSync('local', 'Solo en este dispositivo');
+    renderForm();
+    return;
+  }
+  db = store.collection('meses');
+  db.onSnapshot((snap) => {
+    let touchedCurrent = false;
+    const seen = new Set();
+    for (const d of snap.docs) {
+      seen.add(d.id);
+      if (dirty.has(d.id)) continue;
+      const next = JSON.stringify(d.data());
+      if (JSON.stringify(months[d.id]) !== next) { months[d.id] = JSON.parse(next); if (d.id === key) touchedCurrent = true; }
+    }
+    for (const k of Object.keys(months)) {
+      if (!seen.has(k) && !dirty.has(k) && !snap.metadata.fromCache) { delete months[k]; if (k === key) touchedCurrent = true; }
+    }
+    const editing = document.activeElement && document.activeElement.closest('.panel') && document.activeElement.matches('input, select');
+    if (touchedCurrent && !editing) renderForm(); else renderResults();
+    if (!dirty.size) setSync('ok', 'Sincronizado');
+  }, (e) => {
+    setSync('error', e.code === 'revoked' ? 'Sin acceso a los datos compartidos' : 'Se perdió la conexión. Recarga la página.');
+  });
+  try {
+    const u = await window.claude.use('user');
+    if (u && (await u.can('data.write')) === false) setReadOnly();
+  } catch {}
+})();
+</script>
